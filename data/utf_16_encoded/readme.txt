@@ -1,0 +1,1 @@
+Directory for storing example .csv files derived from .qlb files using various encodings.
