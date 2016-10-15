@@ -1,6 +1,8 @@
 library(tidyr)
 library(dplyr)
 library(Rcpp)
+library(ggplot2)
+sourceCpp("src/find-droplets.cpp")
 
 raw <- read.csv("data/converted_from_qlb/009 plasmid_A01_RAW.qlb.v16le.csv")
 raw$measurements <- 1:nrow(raw)
@@ -49,6 +51,9 @@ ggplot(result, aes(x = ch1h)) + geom_density()  + ggtitle("Derived")
 
 ggplot(amplitude, aes(x = Ch2.Amplitude)) + geom_density() + xlim(c(0, 1E4)) + ggtitle("Reference")
 ggplot(result, aes(x = ch2h)) + geom_density() + xlim(c(0, 1E4)) + ggtitle("Derived")
+
+ggplot(amplitude, aes(x = Ch2.Amplitude, y = Ch1.Amplitude)) + geom_point() + ggtitle("Reference")
+ggplot(result, aes(x = ch2h, y = ch1h)) + geom_point() + ggtitle("Derived")
 
 # trim extra wide ones to get singlets?
 ggplot(result, aes(x = ch1w)) + geom_bar()
