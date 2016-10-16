@@ -10,18 +10,6 @@ raw <- as_data_frame(raw)
 
 amplitude <- read.csv("data/quantasoft_data/009 plasmid_2016-10-07-14-59/009 plasmid_A01_Amplitude.csv")
 
-sample_n(raw, nrow(raw) / 400) %>% 
-  ggplot(aes(x = measurements, y = ch2)) +
-  geom_line() +
-  geom_point(aes(color = droplets2 != 0)) +
-    geom_hline(yintercept = background + 15*sd) 
-
-slice(raw, 3.55E6:3.555E6) %>% 
-  ggplot(aes(x = measurements, y = ch1)) +
-  geom_line() +
-  geom_point(aes(color = droplets2 != 0)) +
-  geom_hline(yintercept = background + 15*sd)
-
 background <- mean(slice(raw, 1:5E5)$ch2)
 sd <- sd(slice(raw, 1:5E5)$ch2)
 sds <- 15
@@ -43,7 +31,20 @@ result <- raw %>%
 
 ggplot(result, aes(x = ch1h, y = ch2h)) + geom_point()
 ggplot(result, aes(x = ch1w, y = ch1h)) + geom_point()
-ggplot(result, aes(x = ch2w, y = ch2h)) + geom_point()
+ggplot(result, aes(x = ch2w, y = ch2h)) + geom_point() + xlim(c(0, 40))
+
+# trim extra wide ones to get singlets?
+ggplot(result, aes(x = ch1w)) + geom_bar()
+ggplot(result, aes(x = ch2w)) + geom_bar()
+ggplot(result, aes(x = ch1w)) + geom_density()
+ggplot(result, aes(x = ch2w)) + geom_density()
+ggplot(result, aes(x = ch1w, y = ch1h)) + geom_point() +
+    xlim(c(0, 40))
+
+ggplot(result, aes(x = ch2w, y = ch2h)) + geom_point() +
+    xlim(c(0, 40))
+
+singlets <- filter(result, (ch2w < 21 & ch2h < 1500) | (ch2w < 26 & ch2h > 1499))
 
 # compare to reference
 ggplot(amplitude, aes(x = Ch1.Amplitude)) + geom_density() + ggtitle("Reference")
@@ -55,13 +56,7 @@ ggplot(result, aes(x = ch2h)) + geom_density() + xlim(c(0, 1E4)) + ggtitle("Deri
 ggplot(amplitude, aes(x = Ch2.Amplitude, y = Ch1.Amplitude)) + geom_point() + ggtitle("Reference")
 ggplot(result, aes(x = ch2h, y = ch1h)) + geom_point() + ggtitle("Derived")
 
-# trim extra wide ones to get singlets?
-ggplot(result, aes(x = ch1w)) + geom_bar()
-ggplot(result, aes(x = ch2w)) + geom_bar()
-ggplot(result, aes(x = ch1w)) + geom_density()
-ggplot(result, aes(x = ch2w)) + geom_density()
-ggplot(result, aes(x = ch1w, y = ch1h)) + geom_hex(bins = 100) +
-  xlim(c(0, 40))
+compensated <- singlets %>% 
+    mutate(ch1hc = ch1h - ch2h * 0.375)
 
-ggplot(result, aes(x = ch2w, y = ch2h)) + geom_hex(bins = 100) +
-    xlim(c(0, 40))
+ggplot(compensated, aes(x = ch2h, y = ch1hc)) + geom_point() + ggtitle("Derived")
