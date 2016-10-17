@@ -6,7 +6,7 @@ using namespace Rcpp;
 NumericVector find_droplets(NumericVector ch1) {
     int magic_number = 785;
     int nrow = ch1.size();
-    int magic_width = 10;
+    int magic_width = 7;
     NumericVector out(nrow);
     
     int droplet_number = 1;  
@@ -17,7 +17,7 @@ NumericVector find_droplets(NumericVector ch1) {
             while (ch1[j] > magic_number & j < nrow) {
                 j++;
             }
-            if ((j - i) > 10) {
+            if ((j - i) > magic_width) {
                 for (int k = i; k < j; k++) {
                     out[k] = droplet_number;
                 }
@@ -34,7 +34,7 @@ NumericVector find_droplets(NumericVector ch1) {
 NumericVector find_droplets_two_channels(NumericVector ch1, NumericVector ch2, 
     int ch1threshold, int ch2threshold) {
     int nrow = ch1.size();
-    int magic_width = 10;
+    int magic_width = 7;
     NumericVector out(nrow);
     
     int droplet_number = 1;  
@@ -45,7 +45,7 @@ NumericVector find_droplets_two_channels(NumericVector ch1, NumericVector ch2,
             while (ch1[j] > ch1threshold & ch2[j] > ch2threshold & j < nrow) {
                 j++;
             }
-            if ((j - i) > 10) {
+            if ((j - i) > magic_width) {
                 for (int k = i; k < j; k++) {
                     out[k] = droplet_number;
                 }
