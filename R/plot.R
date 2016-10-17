@@ -9,26 +9,6 @@ library(tidyr)
 library(dplyr)
 library(stringr)
 
-# compare UTF-16 encodings -----------------------------------------------------
-files <- list.files("data/utf_16_encoded/")
-files <- files[str_detect(files, "csv")]
-
-read_file <- function(f) {
-  x <- read.csv(paste0("data/utf_16_encoded/", f), fileEncoding = "UTF-16")
-  file_name <- str_replace(f, "out_", "")
-  file_name <- str_replace(file_name, "\\.csv", "")
-  x$file <- file_name
-  x$measurements <- 1:nrow(x)
-  x <- gather(x, key = "channel", value = "fluorescence", ch1, ch2)
-  x
-}
-
-x <- bind_rows(lapply(files, read_file))
-
-ggplot(x, aes(x = measurements, y = fluorescence)) +
-  geom_line() +
-  facet_grid(file ~ channel,  scales = "free_y")
-
 # Look at complete files converted from qlb ------------------------------------
 files <- list.files("data/converted_from_qlb")
 files <- files[str_detect(files, "csv")]
