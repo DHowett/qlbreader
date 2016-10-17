@@ -34,6 +34,9 @@ p <- function(d) {
 sample_n(x, nrow(x) / 40) %>% 
   p()
 
+ggsave("output/imgs/raw-traces/009-plasmid-A01-A02.png", width = 8, height = 8,
+    dpi = 600)
+
 # plot zoomed in 
 slice(x, 2.001E6:2.004E6) %>% 
   p()
