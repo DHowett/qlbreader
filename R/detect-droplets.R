@@ -34,10 +34,8 @@ just_droplets <- raw %>%
     filter(droplets != 0)  
 
 just_droplets %>% 
-    sample_n(raw, nrow(raw) / 40) %>% 
     mutate(measurements = 1:nrow(just_droplets)) %>% 
-    ggplot(aes(x = measurements, y = ch2)) + geom_line() 
-+ xlim(c(0, 1000))
+    ggplot(aes(x = measurements, y = ch2)) + geom_line() + xlim(c(0, 1000))
 
 # filter out droplets
 result <- raw %>% 
@@ -64,12 +62,12 @@ ggplot(result, aes(x = ch2w, y = ch2h)) + geom_point() +
     xlim(c(0, 40))
 
 # look at raw doublet 
-filter(result, ch1w == 30, ch1h > 1400, ch1h < 1500)
-
-raw %>% 
-    mutate(droplets = find_droplets_two_channels(ch1, ch2, 750, 600)) %>% 
-    filter(droplets == 14182)  %>% 
-    ggplot(aes(x = measurements, y = ch1)) + geom_point()
+# filter(result, ch1w == 30, ch1h > 1400, ch1h < 1500)
+# 
+# raw %>% 
+#     mutate(droplets = find_droplets_two_channels(ch1, ch2, 750, 600)) %>% 
+#     filter(droplets == 14182)  %>% 
+#     ggplot(aes(x = measurements, y = ch1)) + geom_point()
 
 # get singlets
 singlets <- filter(result, (ch2w < 21 & ch2h < 1750) | (ch2w < 27 & ch2h > 1750))
@@ -85,12 +83,10 @@ ggplot(amplitude, aes(x = Ch2.Amplitude, y = Ch1.Amplitude)) + geom_point() + gg
 ggplot(result, aes(x = ch2h, y = ch1h)) + geom_point() + ggtitle("Derived")
 
 compensated <- singlets %>% 
-    mutate(ch1ac = ch1a + ch2a * -0.36, 
-        ch2ac = ch1a * -0.394962 + ch2a, 
+    mutate(
         ch1h = ch1h - 597.6,
         ch2h = ch2h - 421.63,
         ch1hc = 1.03 * ch1h + ch2h * -0.39, 
-        ch2hc = ch1h * -0.36 + 1.87 * ch2h)
+        ch2hc = ch1h * -0.36 + 1.96 * ch2h)
 
 ggplot(compensated, aes(x = ch2hc, y = ch1hc)) + geom_point() + ggtitle("Derived")
-ggplot(compensated, aes(x = ch2ac, y = ch1ac)) + geom_point() + ggtitle("Derived")
