@@ -27,6 +27,10 @@ type Record struct {
 	CH2 uint16
 }
 
+type CompensationRecord struct {
+	Values [4]float32
+}
+
 func main() {
 	f, _ := os.Open(os.Args[1])
 	defer f.Close()
@@ -35,6 +39,20 @@ func main() {
 	f.Seek(0x0, 0)
 	binary.Read(f, binary.LittleEndian, &hdr)
 	fmt.Printf("Magic: %4s\nNumber of config records: %d\n", hdr.Magic, hdr.NParam)
+
+	f.Seek(0x16A, 0)
+	// read a zero-terminated string
+	////// HACK -- assume it's Ch1,Ch2\0 (8 bytes)
+	chS := make([]byte, 8)
+	f.Read(chS)
+	comps := make([]CompensationRecord, 4)
+	binary.Read(f, binary.LittleEndian, &comps)
+	for _, v := range comps {
+		fmt.Printf("\n")
+		fmt.Printf("    %9s | %9s\n", "Ch1", "Ch2")
+		fmt.Printf("Ch1 %9f | %9f\n", v.Values[0], v.Values[1])
+		fmt.Printf("Ch2 %9f | %9f\n\n", v.Values[2], v.Values[3])
+	}
 
 	f.Seek(0x1B2, 0)
 	for i := uint16(0); i < hdr.NParam; i++ {
