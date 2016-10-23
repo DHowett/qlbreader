@@ -34,8 +34,10 @@ just_droplets <- raw %>%
     filter(droplets != 0)  
 
 just_droplets %>% 
+    sample_n(raw, nrow(raw) / 40) %>% 
     mutate(measurements = 1:nrow(just_droplets)) %>% 
-    ggplot(aes(x = measurements, y = ch1)) + geom_line() + xlim(c(0, 1000))
+    ggplot(aes(x = measurements, y = ch2)) + geom_line() 
++ xlim(c(0, 1000))
 
 # filter out droplets
 result <- raw %>% 
@@ -85,8 +87,10 @@ ggplot(result, aes(x = ch2h, y = ch1h)) + geom_point() + ggtitle("Derived")
 compensated <- singlets %>% 
     mutate(ch1ac = ch1a + ch2a * -0.36, 
         ch2ac = ch1a * -0.394962 + ch2a, 
-        ch1hc = ch1h + ch2h * -0.36, 
-        ch2hc = ch1h * -0.394962 + ch2h)
+        ch1h = ch1h - 597.6,
+        ch2h = ch2h - 421.63,
+        ch1hc = 1.03 * ch1h + ch2h * -0.39, 
+        ch2hc = ch1h * -0.36 + 1.87 * ch2h)
 
 ggplot(compensated, aes(x = ch2hc, y = ch1hc)) + geom_point() + ggtitle("Derived")
 ggplot(compensated, aes(x = ch2ac, y = ch1ac)) + geom_point() + ggtitle("Derived")
