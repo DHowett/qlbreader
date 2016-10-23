@@ -9,6 +9,7 @@ raw$measurements <- 1:nrow(raw)
 raw <- as_data_frame(raw)
 
 amplitude <- read.csv("data/quantasoft_data/009 plasmid_2016-10-07-14-59/009 plasmid_A01_Amplitude.csv")
+amplitude <- as_data_frame(amplitude)
 
 background <- mean(slice(raw, 1:5E5)$ch2)
 sd <- sd(slice(raw, 1:5E5)$ch2)
@@ -17,17 +18,33 @@ sds <- 15
 # this might be wrong !!!!
 # DANGER !!!!
 # !!!!!
-calc_auc <- function(y) {
-    id <- 1:length(y)
-    x <- 1:length(y)
-    sum(diff(x[id]) * zoo::rollmean(y[id],2))
+calc_auc <- function(y, channel_mean) {
+    # rise = max(y1, y2) - min(y1, y2)
+    # rise_area = (rise * 1) * 1/2
+    # stalk = min(y1, y2)
+    # stalk_area = stalk * 1
+    # area = rise_area + stalk_area
+    y <- y - channel_mean
+    sum(y) - ((y[1] + y[length(y)]) / 2)
 }
 
+# look at just droplets
+just_droplets <- raw %>% 
+    mutate(droplets = find_droplets_two_channels(ch1, ch2, 750, 600)) %>% 
+    filter(droplets != 0)  
+
+just_droplets %>% 
+    mutate(measurements = 1:nrow(just_droplets)) %>% 
+    ggplot(aes(x = measurements, y = ch1)) + geom_line() + xlim(c(0, 1000))
+
+# filter out droplets
 result <- raw %>% 
-  mutate(droplets = find_droplets_two_channels(ch1, ch2, 785, 600)) %>% 
+  mutate(droplets = find_droplets_two_channels(ch1, ch2, 750, 600)) %>% 
   filter(droplets != 0) %>% 
   group_by(droplets) %>% 
-  summarise(ch1w = length(ch1), ch2w = length(ch2), ch1h = max(ch1), ch2h = max(ch2))
+  summarise(ch1w = length(ch1), ch2w = length(ch2), 
+      ch1h = max(ch1), ch2h = max(ch2), 
+      ch1a = calc_auc(ch1, 598), ch2a = calc_auc(ch2, 422))
 
 ggplot(result, aes(x = ch1h, y = ch2h)) + geom_point()
 ggplot(result, aes(x = ch1w, y = ch1h)) + geom_point()
@@ -44,7 +61,16 @@ ggplot(result, aes(x = ch1w, y = ch1h)) + geom_point() +
 ggplot(result, aes(x = ch2w, y = ch2h)) + geom_point() +
     xlim(c(0, 40))
 
-singlets <- filter(result, (ch2w < 21 & ch2h < 1500) | (ch2w < 26 & ch2h > 1499))
+# look at raw doublet 
+filter(result, ch1w == 30, ch1h > 1400, ch1h < 1500)
+
+raw %>% 
+    mutate(droplets = find_droplets_two_channels(ch1, ch2, 750, 600)) %>% 
+    filter(droplets == 14182)  %>% 
+    ggplot(aes(x = measurements, y = ch1)) + geom_point()
+
+# get singlets
+singlets <- filter(result, (ch2w < 21 & ch2h < 1750) | (ch2w < 27 & ch2h > 1750))
 
 # compare to reference
 ggplot(amplitude, aes(x = Ch1.Amplitude)) + geom_density() + ggtitle("Reference")
@@ -57,6 +83,10 @@ ggplot(amplitude, aes(x = Ch2.Amplitude, y = Ch1.Amplitude)) + geom_point() + gg
 ggplot(result, aes(x = ch2h, y = ch1h)) + geom_point() + ggtitle("Derived")
 
 compensated <- singlets %>% 
-    mutate(ch1hc = ch1h - ch2h * 0.375)
+    mutate(ch1ac = ch1a + ch2a * -0.36, 
+        ch2ac = ch1a * -0.394962 + ch2a, 
+        ch1hc = ch1h + ch2h * -0.36, 
+        ch2hc = ch1h * -0.394962 + ch2h)
 
-ggplot(compensated, aes(x = ch2h, y = ch1hc)) + geom_point() + ggtitle("Derived")
+ggplot(compensated, aes(x = ch2hc, y = ch1hc)) + geom_point() + ggtitle("Derived")
+ggplot(compensated, aes(x = ch2ac, y = ch1ac)) + geom_point() + ggtitle("Derived")
