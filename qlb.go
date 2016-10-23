@@ -6,9 +6,15 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strconv"
+
+	"github.com/jessevdk/go-flags"
 )
 
 type Header struct {
@@ -158,6 +164,13 @@ func OpenQLBFile(path string) (*QLBFile, error) {
 
 }
 
+func (qf *QLBFile) GetCompensationMatrix(idx int) (*CompensationRecord, error) {
+	if idx < 0 || idx >= len(qf.comps) {
+		return nil, errors.New("out of range")
+	}
+	return &qf.comps[idx], nil
+}
+
 func (qf *QLBFile) ReadRecord() (Record, error) {
 	var rec Record
 	err := binary.Read(qf.file, binary.LittleEndian, &rec)
@@ -174,19 +187,23 @@ func QLBtoCSV(qf *QLBFile, csvPath string) error {
 	outf, _ := os.Create(csvPath)
 	defer outf.Close()
 
+	csvw := csv.NewWriter(outf)
+
 	//var chs map[int]int
 	i := 0
-	fmt.Fprintf(outf, "ch1,ch2\n")
+	csvw.Write([]string{"ch1", "ch2"})
 	for {
 		rec, err := qf.ReadRecord()
 		if err != nil && err != io.EOF {
 			return err
 		}
 
-		fmt.Fprintf(outf, "%d,%d\n", rec.CH1, rec.CH2)
+		sCH1 := strconv.FormatUint(uint64(rec.CH1), 10)
+		sCH2 := strconv.FormatUint(uint64(rec.CH2), 10)
+		csvw.Write([]string{sCH1, sCH2})
 		i++
 
-		if (i % 10000) == 0 {
+		if (i % 100000) == 0 {
 			fmt.Fprintf(os.Stderr, "... %d ...\n", i)
 		}
 
@@ -194,21 +211,66 @@ func QLBtoCSV(qf *QLBFile, csvPath string) error {
 			break
 		}
 	}
+	csvw.Flush()
 	fmt.Fprintf(os.Stderr, "--- %d measurements ---\n", i)
 	return nil
 }
 
+type Options struct {
+	OutDir  string `short:"o" long:"out" description:"output directory" default:"out"`
+	Recurse bool   `short:"r" description:"recurse into subdirectories" default:"false"`
+}
+
 func main() {
-	qf, err := OpenQLBFile(os.Args[1])
+	var opts Options
+	args, _ := flags.ParseArgs(&opts, os.Args)
+
+	os.MkdirAll(opts.OutDir, os.FileMode(0755))
+
+	compFile, err := os.Create(filepath.Join(opts.OutDir, "comps.csv"))
 	if err != nil {
 		panic(err)
 	}
+	defer compFile.Close()
+	compCSVWriter := csv.NewWriter(compFile)
+	compCSVWriter.Write([]string{"ch1", "ch2"})
 
-	defer qf.Close()
+	inDir := args[1]
+	filepath.Walk(args[1], func(path string, fi os.FileInfo, err error) error {
+		if fi.IsDir() {
+			if path != inDir && !opts.Recurse {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 
-	csvPath := os.Args[1] + ".v16le.csv"
-	err = QLBtoCSV(qf, csvPath)
-	if err != nil {
-		panic(err)
-	}
+		fmt.Println(path)
+		if filepath.Ext(path) != ".qlb" {
+			return nil
+		}
+
+		qf, err := OpenQLBFile(path)
+		if err != nil {
+			return err
+		}
+
+		defer qf.Close()
+
+		if compCSVWriter != nil {
+			comps, _ := qf.GetCompensationMatrix(0)
+			s := make([]string, len(comps.Values))
+			for i, v := range comps.Values {
+				s[i] = strconv.FormatFloat(float64(v), 'g', 9, 32)
+			}
+			compCSVWriter.Write(s[0:2])
+			compCSVWriter.Write(s[2:4])
+			compCSVWriter.Flush()
+			compCSVWriter = nil
+		}
+
+		_, fileOnly := filepath.Split(path)
+		csvPath := filepath.Join(opts.OutDir, fileOnly+".v16le.csv")
+		err = QLBtoCSV(qf, csvPath)
+		return err
+	})
 }
