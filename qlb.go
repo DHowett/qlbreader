@@ -82,7 +82,8 @@ func main() {
 
 	outf, _ := os.Create(os.Args[1] + ".v16le.csv")
 	defer outf.Close()
-	f.Seek(0x47C+1, 0)
+
+	f.Seek(0x47D, 0)
 	//var chs map[int]int
 	i := 0
 	fmt.Fprintf(outf, "ch1,ch2\n")
