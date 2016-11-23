@@ -24,11 +24,13 @@ import (
 // 0x0004b U32 Unknown
 // 0x0001b U8 Unknown
 // 0x0001b U8 Unknown
-// 0x0004b String WellName
-// 0x0100b [ ... unknown purpose ... ]
-// 0x0220b String Assay Type
-// 0x0120b String Channel 1 Interpretation
-// 0x0120b String Channel 2 Interpretation
+// 0x0004b String ID
+// 0x0100b String Name
+// 0x0220b String Assay
+// 0x0020b String Channel 1 Interpretation
+// 0x0100b String Channel 1 Name
+// 0x0020b String Channel 2 Interpretation
+// 0x0100b String Channel 2 Name
 //
 // [WELL CONTENTS RECORDS x 96]
 // 0x0004b U32 Unknown
@@ -63,10 +65,10 @@ type Well struct {
 	// A well is a set of:
 
 	// Uses
-	WellName  string
-	AssayType string
-	CH1Use    string
-	CH2Use    string
+	ID     string
+	Assay  string
+	CH1Use string
+	CH2Use string
 
 	// Contents
 	CatalogID string
@@ -77,18 +79,20 @@ type Well struct {
 }
 
 func (w *Well) String() string {
-	return fmt.Sprintf("Well %v [%s#%s] (%v); %v/%v", w.WellName, w.CatalogID, w.Reagent, w.AssayType, w.CH1Use, w.CH2Use)
+	return fmt.Sprintf("Well %v [%s#%s] (%v); %v/%v", w.ID, w.CatalogID, w.Reagent, w.Assay, w.CH1Use, w.CH2Use)
 }
 
 type wellUseRecord struct {
-	Unknown1  uint32
-	Unknown2  byte
-	Unknown3  byte
-	WellName  [4]byte
-	Unknown4  [0x100]byte
-	AssayType [0x220]byte
-	CH1Use    [0x120]byte
-	CH2Use    [0x120]byte
+	Unknown1 uint32
+	Unknown2 byte
+	Unknown3 byte
+	ID       [4]byte
+	Name     [0x100]byte
+	Assay    [0x220]byte
+	CH1Use   [0x20]byte
+	CH1Name  [0x100]byte
+	CH2Use   [0x20]byte
+	CH2Name  [0x100]byte
 }
 
 type wellContentsRecord struct {
@@ -96,7 +100,7 @@ type wellContentsRecord struct {
 	Unknown2 uint16
 	Unknown3 uint16
 	Unknown4 uint16
-	WellName [4]byte
+	ID       [4]byte
 	Unknown5 [0x84]byte
 }
 
@@ -154,10 +158,10 @@ func OpenQLPFile(path string) (*QLPFile, error) {
 
 	for i, wur := range wellUseRecords {
 		wells[i] = Well{
-			WellName:  zts(wur.WellName[:]),
-			AssayType: zts(wur.AssayType[:]),
-			CH1Use:    zts(wur.CH1Use[:]),
-			CH2Use:    zts(wur.CH2Use[:]),
+			ID:     zts(wur.ID[:]),
+			Assay:  zts(wur.Assay[:]),
+			CH1Use: zts(wur.CH1Use[:]),
+			CH2Use: zts(wur.CH2Use[:]),
 		}
 	}
 
